@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubevirt-csi-driver-operator
+  namespace: kubevirt-csi-driver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: kubevirt-csi-driver-operator
+  template:
+    metadata:
+      labels:
+        name: kubevirt-csi-driver-operator
+    spec:
+      serviceAccountName: kubevirt-csi-driver-operator
+      priorityClassName: system-cluster-critical
+      containers:
+        - name: kubevirt-csi-driver-operator
+          imagePullPolicy: Always
+          image: quay.io/ydayagi/csi-driver-operator:latest
+          tolerations:
+            - key: CriticalAddonsOnly
+              operator: Exists
+          args:
+            - start
+          env:
+            - name: OPERATOR_NAME
+              value: kubevirt-csi-driver-operator
+            - name: DRIVER_IMAGE
+              value: quay.io/kubevirt/csi-driver:latest
+            - name: PROVISIONER_IMAGE
+              value: quay.io/openshift/origin-csi-external-provisioner:latest
+            - name: ATTACHER_IMAGE
+              value: quay.io/openshift/origin-csi-external-attacher:latest
+            - name: NODE_DRIVER_REGISTRAR_IMAGE
+              value: quay.io/openshift/origin-csi-node-driver-registrar:latest
+            - name: LIVENESS_PROBE_IMAGE
+              value: quay.io/openshift/origin-csi-livenessprobe:latest
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
