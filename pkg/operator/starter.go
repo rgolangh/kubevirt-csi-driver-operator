@@ -90,8 +90,6 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			"leader-election-cr.yaml",
 			"controller-leader-binding.yaml",
 			"node-leader-binding.yaml",
-			"node.yaml",
-			"controller.yaml",
 		},
 	).
 		WithCredentialsRequestController(

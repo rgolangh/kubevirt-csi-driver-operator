@@ -16,7 +16,7 @@ These are the steps performed by the operator for deploying the driver.
   * Create PVCs
   * Set feature gates
 ## Development
-* Build the operaotr
+* Build the operator
 ```
 make build
 ```
