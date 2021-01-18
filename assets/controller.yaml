@@ -27,7 +27,7 @@ spec:
       containers:
         - name: csi-driver
           imagePullPolicy: Always
-          image: quay.io/kubevirt/csi-driver:latest
+          image: ${DRIVER_IMAGE}
           args:
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--namespace=kubevirt-csi-driver"
@@ -61,7 +61,7 @@ spec:
               memory: 50Mi
               cpu: 10m
         - name: csi-provisioner
-          image: quay.io/openshift/origin-csi-external-provisioner:latest
+          image: ${PROVISIONER_IMAGE}
           args:
             - --csi-address=$(ADDRESS)
             - --default-fstype=ext4
@@ -73,7 +73,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: quay.io/openshift/origin-csi-external-attacher:latest
+          image: ${ATTACHER_IMAGE}
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
@@ -88,7 +88,7 @@ spec:
               memory: 50Mi
               cpu: 10m
         - name: csi-liveness-probe
-          image: quay.io/openshift/origin-csi-livenessprobe:latest
+          image: ${LIVENESS_PROBE_IMAGE}
           args:
             - --csi-address=/csi/csi.sock
             - --probe-timeout=3s

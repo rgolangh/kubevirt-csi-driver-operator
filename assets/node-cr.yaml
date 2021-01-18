@@ -34,3 +34,4 @@ rules:
     resources: ["securitycontextconstraints"]
     verbs: ["use"]
     resourceNames: ["privileged"]
+    
