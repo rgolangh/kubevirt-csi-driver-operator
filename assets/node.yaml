@@ -33,6 +33,8 @@ spec:
             - "--node-name=$(KUBE_NODE_NAME)"
             - "--infra-cluster-namespace=$(INFRACLUSTER_NAMESPACE)"
             - "--infra-cluster-kubeconfig=/var/run/secrets/infracluster/kubeconfig"
+            - "--infra-cluster-labelname=$(INFRACLUSTER_LABELNAME)"
+            - "--infra-cluster-labelvalue=$(INFRACLUSTER_LABELVALUE)"
           env:
             - name: KUBE_NODE_NAME
               valueFrom:
@@ -43,6 +45,16 @@ spec:
                 configMapKeyRef:
                   name: driver-config
                   key: infraClusterNamespace
+            - name: INFRACLUSTER_LABELNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: driver-config
+                  key: infraClusterLabelName
+            - name: INFRACLUSTER_LABELVALUE
+              valueFrom:
+                configMapKeyRef:
+                  name: driver-config
+                  key: infraClusterLabelValue
           volumeMounts:
             - name: infracluster
               mountPath: "/var/run/secrets/infracluster"

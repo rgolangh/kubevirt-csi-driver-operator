@@ -35,21 +35,13 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	dynamicClient := dynamicclient.NewForConfigOrDie(rest.AddUserAgent(controllerConfig.KubeConfig, operatorName))
 	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(kubeClient, defaultNamespace, "")
 
-	// Get infra cluster namespace for driver
-	infraClusterNamespace, err := getInfraClusterNamespace(ctx, kubeClient)
+	// Create driver config
+	configMap, err := createDriverConfig(ctx, kubeClient)
 	if err != nil {
 		panic(err)
 	}
 
-	// Create ConfigMap YAML for driver
-	configMap := &corev1.ConfigMap{}
-
-	configMap.APIVersion = "v1"
-	configMap.Kind = "ConfigMap"
-	configMap.Name = "driver-config"
-	configMap.Namespace = "kubevirt-csi-driver"
-	configMap.Data = map[string]string{"infraClusterNamespace": infraClusterNamespace}
-
+	// Create YAML for driver config
 	bytes, err := yaml.Marshal(configMap)
 	if err != nil {
 		panic(err)
@@ -140,27 +132,44 @@ func assetPanic(name string) []byte {
 	return bytes
 }
 
-func getInfraClusterNamespace(ctx context.Context, kubeClient *kubeclient.Clientset) (string, error) {
+func createDriverConfig(ctx context.Context, kubeClient *kubeclient.Clientset) (*corev1.ConfigMap, error) {
 	configMap, err := kubeClient.CoreV1().ConfigMaps("openshift-config").Get(ctx, "cloud-provider-config", metav1.GetOptions{})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	jsonConfig, ok := configMap.Data["config"]
 	if !ok {
-		return "", fmt.Errorf("Field config in ConfigMap openshift-config/cloud-provider-config is missing")
+		return nil, fmt.Errorf("Field config in ConfigMap openshift-config/cloud-provider-config is missing")
 	}
 
 	var config map[string]string
 	err = json.Unmarshal([]byte(jsonConfig), &config)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	namespace, ok := config["namespace"]
 	if !ok {
-		return "", fmt.Errorf("Missing namespace in JSON string. Check field config in ConfigMap openshift-config/cloud-provider-config")
+		return nil, fmt.Errorf("Missing namespace in JSON string. Check field config in ConfigMap openshift-config/cloud-provider-config")
 	}
 
-	return namespace, nil
+	infraID, ok := config["infraID"]
+	if !ok {
+		return nil, fmt.Errorf("Missing infraID in JSON string. Check field config in ConfigMap openshift-config/cloud-provider-config")
+	}
+
+	driverConfig := &corev1.ConfigMap{}
+
+	driverConfig.APIVersion = "v1"
+	driverConfig.Kind = "ConfigMap"
+	driverConfig.Name = "driver-config"
+	driverConfig.Namespace = defaultNamespace
+	driverConfig.Data = map[string]string{
+		"infraClusterNamespace":  namespace,
+		"infraClusterLabelName":  fmt.Sprintf("tenantcluster-%s-machine.openshift.io", infraID),
+		"infraClusterLabelValue": "owned",
+	}
+
+	return driverConfig, nil
 }
