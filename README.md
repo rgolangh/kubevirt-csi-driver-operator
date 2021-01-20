@@ -1,4 +1,4 @@
-# OCP-CSI-OPERATOR
+# KUBEVIRT-CSI-DRIVER-OPERATOR
 Operator for deploying kubevirt/csi-driver in OCP cluster
 ## Introduction
 The kubevirt/csi-driver is intended for clusters installed over Kubevirt/CNV.
