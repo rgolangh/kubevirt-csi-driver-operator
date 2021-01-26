@@ -5,7 +5,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: kubevirt-csi-controller-sa
-    namespace: kubevirt-csi-driver
+    namespace: openshift-cluster-csi-drivers
 roleRef:
   kind: ClusterRole
   name: kubevirt-csi-controller-cr

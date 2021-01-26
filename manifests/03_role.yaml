@@ -3,7 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: kubevirt-csi-driver-operator-role
-  namespace: kubevirt-csi-driver
+  namespace: openshift-cluster-csi-drivers
 rules:
   - apiGroups:
       - ''

@@ -2,7 +2,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: kubevirt-csi-controller
-  namespace: kubevirt-csi-driver
+  namespace: openshift-cluster-csi-drivers
 spec:
   replicas: 1
   selector:

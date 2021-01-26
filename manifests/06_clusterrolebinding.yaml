@@ -10,4 +10,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: kubevirt-csi-driver-operator
-  namespace: kubevirt-csi-driver
+  namespace: openshift-cluster-csi-drivers

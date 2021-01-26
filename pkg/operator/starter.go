@@ -23,7 +23,7 @@ import (
 
 const (
 	// Operand and operator run in the same namespace
-	defaultNamespace = "kubevirt-csi-driver"
+	defaultNamespace = "openshift-cluster-csi-drivers"
 	operatorName     = "kubevirt-csi-driver-operator"
 	operandName      = "kubevirt-csi-driver"
 	instanceName     = "csi.kubevirt.io"
