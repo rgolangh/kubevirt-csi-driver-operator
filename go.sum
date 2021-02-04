@@ -341,6 +341,7 @@ github.com/openshift/library-go v0.0.0-20200723181926-829d4689a31f h1:qHfj+KfWv0
 github.com/openshift/library-go v0.0.0-20200723181926-829d4689a31f/go.mod h1:/gVyoY2dl35bcCCgs+36UmGt6n/kn3f64hfDduujQ1c=
 github.com/openshift/library-go v0.0.0-20201215165635-4ee79b1caed5 h1:u3whBOCmgIDS+nWnoN6JZmfjeISZK2ILuBEnFy6ivpw=
 github.com/openshift/library-go v0.0.0-20201223214116-830765adf874 h1:l6B7qfp+Ufub5P/lqIfQoyxHWZ2bwgFQYxwF5hHltEM=
+github.com/openshift/library-go v0.0.0-20210127081712-a4f002827e42 h1:MFQV6xoA94IMhsrZGyjmhLTPljPY4biNPwDjn2hjZUc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
@@ -414,6 +415,8 @@ github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXf
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
+github.com/thedevsaddam/gojsonq/v2 v2.5.2 h1:CoMVaYyKFsVj6TjU6APqAhAvC07hTI6IQen8PHzHYY0=
+github.com/thedevsaddam/gojsonq/v2 v2.5.2/go.mod h1:bv6Xa7kWy82uT0LnXPE2SzGqTj33TAEeR560MdJkiXs=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=

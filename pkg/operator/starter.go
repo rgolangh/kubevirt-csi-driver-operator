@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	dynamicclient "k8s.io/client-go/dynamic"
 	kubeclient "k8s.io/client-go/kubernetes"
@@ -19,6 +21,8 @@ import (
 	"github.com/openshift/library-go/pkg/operator/csi/csicontrollerset"
 	goc "github.com/openshift/library-go/pkg/operator/genericoperatorclient"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
+	gojsonq "github.com/thedevsaddam/gojsonq/v2"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
@@ -29,25 +33,31 @@ const (
 	instanceName     = "csi.kubevirt.io"
 )
 
+// installConfig is used for reading cluster's install-config YAML
+type kubevirt struct {
+	StorageClass string
+}
+type platform struct {
+	Kubevirt kubevirt
+}
+type installConfig struct {
+	Platform platform
+}
+
 func RunOperator(ctx context.Context, controllerConfig *controllercmd.ControllerContext) error {
 	// Create clientsets and informers
 	kubeClient := kubeclient.NewForConfigOrDie(rest.AddUserAgent(controllerConfig.KubeConfig, operatorName))
 	dynamicClient := dynamicclient.NewForConfigOrDie(rest.AddUserAgent(controllerConfig.KubeConfig, operatorName))
 	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(kubeClient, defaultNamespace, "")
 
-	// Create driver config
-	configMap, err := createDriverConfig(ctx, kubeClient)
+	// Create driver config YAML
+	err := createDriverConfig(ctx, kubeClient)
 	if err != nil {
 		panic(err)
 	}
 
-	// Create YAML for driver config
-	bytes, err := yaml.Marshal(configMap)
-	if err != nil {
-		panic(err)
-	}
-
-	err = ioutil.WriteFile("assets/configmap.yaml", bytes, 0777)
+	// Create storage class
+	err = createStorageClass(ctx, kubeClient, dynamicClient)
 	if err != nil {
 		panic(err)
 	}
@@ -132,36 +142,36 @@ func assetPanic(name string) []byte {
 	return bytes
 }
 
-func createDriverConfig(ctx context.Context, kubeClient *kubeclient.Clientset) (*corev1.ConfigMap, error) {
+func createDriverConfig(ctx context.Context, kubeClient *kubeclient.Clientset) error {
 	configMap, err := kubeClient.CoreV1().ConfigMaps("openshift-config").Get(ctx, "cloud-provider-config", metav1.GetOptions{})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	jsonConfig, ok := configMap.Data["config"]
 	if !ok {
-		return nil, fmt.Errorf("Field config in ConfigMap openshift-config/cloud-provider-config is missing")
+		return fmt.Errorf("Field config in ConfigMap openshift-config/cloud-provider-config is missing")
 	}
 
 	var config map[string]string
 	err = json.Unmarshal([]byte(jsonConfig), &config)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	namespace, ok := config["namespace"]
 	if !ok {
-		return nil, fmt.Errorf("Missing namespace in JSON string. Check field config in ConfigMap openshift-config/cloud-provider-config")
+		return fmt.Errorf("Missing namespace in JSON string. Check field config in ConfigMap openshift-config/cloud-provider-config")
 	}
 
 	infraID, ok := config["infraID"]
 	if !ok {
-		return nil, fmt.Errorf("Missing infraID in JSON string. Check field config in ConfigMap openshift-config/cloud-provider-config")
+		return fmt.Errorf("Missing infraID in JSON string. Check field config in ConfigMap openshift-config/cloud-provider-config")
 	}
 
 	driverConfig := &corev1.ConfigMap{}
 
-	driverConfig.APIVersion = "v1"
+	driverConfig.APIVersion = corev1.SchemeGroupVersion.String()
 	driverConfig.Kind = "ConfigMap"
 	driverConfig.Name = "driver-config"
 	driverConfig.Namespace = defaultNamespace
@@ -171,5 +181,142 @@ func createDriverConfig(ctx context.Context, kubeClient *kubeclient.Clientset) (
 		"infraClusterLabelValue": "owned",
 	}
 
-	return driverConfig, nil
+	bytes, err := yaml.Marshal(driverConfig)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile("assets/configmap.yaml", bytes, 0777)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createStorageClass(ctx context.Context, kubeClient *kubeclient.Clientset, dynamicClient dynamicclient.Interface) error {
+	const storageClassName = "kubevirt-csi-driver"
+
+	// Check whether StorageClass already exists
+	_, err := kubeClient.StorageV1().StorageClasses().Get(ctx, storageClassName, metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		klog.Error("Failed reading StorageClass " + storageClassName)
+		return err
+	}
+
+	if err == nil {
+		klog.Info("StorageClass " + storageClassName + " already exists")
+		return nil
+	}
+
+	// StorageClass does not exist. Create it.
+	infraStorageClassName := ""
+
+	// We need to figure out which storage class to use in infra cluster (where kubevirt is installed).
+	// Try reading from kube-system/ConfigMap/cluster-config-v1
+	// Try reading from openshift-machine-api/MachineSets. Use first in the list.
+	// If not found then log warning and return
+
+	infraStorageClassName, err = extractStorageClassFromClusterConfig(ctx, kubeClient)
+	if err != nil {
+		return err
+	}
+
+	if infraStorageClassName == "" {
+		infraStorageClassName, err = extractStorageClassFromMachineSet(ctx, dynamicClient)
+		if err != nil {
+			return err
+		}
+	}
+
+	// If storage class name not found then return
+	if infraStorageClassName == "" {
+		klog.Warning("Can not create StorageClass for driver. Infra cluster StorageClass name not found. Please create StorageClass manually. Refer to driver's documentation https://github.com/kubevirt/csi-driver")
+		return nil
+	}
+
+	klog.Info("StorageClass " + storageClassName + " will be created")
+
+	storageClass := &storagev1.StorageClass{}
+
+	storageClass.APIVersion = storagev1.SchemeGroupVersion.String()
+	storageClass.Kind = "StorageClass"
+	storageClass.Name = storageClassName
+	storageClass.Provisioner = instanceName
+	storageClass.Parameters = map[string]string{"infraStorageClassName": infraStorageClassName}
+
+	_, err = kubeClient.StorageV1().StorageClasses().Create(ctx, storageClass, metav1.CreateOptions{})
+	if err != nil {
+		klog.Error("Failed creating StorageClass. Error: " + err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func extractStorageClassFromClusterConfig(ctx context.Context, kubeClient *kubeclient.Clientset) (string, error) {
+	// Get ConfigMap
+	configMap, err := kubeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "cluster-config-v1", metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return "", err
+	}
+
+	// No ConfigMap
+	if err != nil {
+		return "", nil
+	}
+
+	// ConfigMap exists
+	yamlInstallConfig, ok := configMap.Data["install-config"]
+
+	if !ok {
+		return "", fmt.Errorf("install-config field is missing from ConfigMap kube-system/cluster-config-v1")
+	}
+
+	installConfig := installConfig{}
+	err = yaml.Unmarshal([]byte(yamlInstallConfig), &installConfig)
+	if err != nil {
+		return "", err
+	}
+
+	storageClassName := installConfig.Platform.Kubevirt.StorageClass
+
+	if storageClassName != "" {
+		klog.Infof("Found infra cluster storage class name '" + storageClassName + "' in ConfigMap kube-system/cluster-config-v1")
+	}
+
+	return storageClassName, nil
+}
+
+func extractStorageClassFromMachineSet(ctx context.Context, client dynamicclient.Interface) (string, error) {
+	resource := schema.GroupVersionResource{
+		Group:    "machine.openshift.io",
+		Version:  "v1beta1",
+		Resource: "machinesets",
+	}
+
+	list, err := client.Resource(resource).Namespace("openshift-machine-api").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	if list == nil || list.Items == nil || len(list.Items) == 0 {
+		return "", nil
+	}
+
+	bytes, err := list.Items[0].MarshalJSON()
+	if err != nil {
+		return "", err
+	}
+
+	storageClassName, ok := gojsonq.New().FromString(string(bytes)).Find("spec.template.spec.providerSpec.value.storageClassName").(string)
+	if !ok {
+		return "", nil
+	}
+
+	if storageClassName != "" {
+		klog.Infof("Found infra cluster storage class name '" + storageClassName + "' in MachineSet openshift-machine-api/" + list.Items[0].GetName())
+	}
+
+	return storageClassName, nil
 }
