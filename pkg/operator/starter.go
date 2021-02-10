@@ -176,9 +176,8 @@ func createDriverConfig(ctx context.Context, kubeClient *kubeclient.Clientset) e
 	driverConfig.Name = "driver-config"
 	driverConfig.Namespace = defaultNamespace
 	driverConfig.Data = map[string]string{
-		"infraClusterNamespace":  namespace,
-		"infraClusterLabelName":  fmt.Sprintf("tenantcluster-%s-machine.openshift.io", infraID),
-		"infraClusterLabelValue": "owned",
+		"infraClusterNamespace": namespace,
+		"infraClusterLabels":    fmt.Sprintf("tenantcluster-%s-machine.openshift.io=owned", infraID),
 	}
 
 	bytes, err := yaml.Marshal(driverConfig)

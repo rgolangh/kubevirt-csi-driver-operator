@@ -33,8 +33,7 @@ spec:
             - "--namespace=kubevirt-csi-driver"
             - "--infra-cluster-namespace=$(INFRACLUSTER_NAMESPACE)"
             - "--infra-cluster-kubeconfig=/var/run/secrets/infracluster/kubeconfig"
-            - "--infra-cluster-labelname=$(INFRACLUSTER_LABELNAME)"
-            - "--infra-cluster-labelvalue=$(INFRACLUSTER_LABELVALUE)"
+            - "--infra-cluster-labels=$(INFRACLUSTER_LABELS)"
             - --v=5
           ports:
             - name: healthz
@@ -53,16 +52,11 @@ spec:
                 configMapKeyRef:
                   name: driver-config
                   key: infraClusterNamespace
-            - name: INFRACLUSTER_LABELNAME
+            - name: INFRACLUSTER_LABELS
               valueFrom:
                 configMapKeyRef:
                   name: driver-config
-                  key: infraClusterLabelName
-            - name: INFRACLUSTER_LABELVALUE
-              valueFrom:
-                configMapKeyRef:
-                  name: driver-config
-                  key: infraClusterLabelValue
+                  key: infraClusterLabels
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
