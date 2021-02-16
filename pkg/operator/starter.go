@@ -10,6 +10,7 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	dynamicclient "k8s.io/client-go/dynamic"
 	kubeclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -21,7 +22,6 @@ import (
 	"github.com/openshift/library-go/pkg/operator/csi/csicontrollerset"
 	goc "github.com/openshift/library-go/pkg/operator/genericoperatorclient"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
-	gojsonq "github.com/thedevsaddam/gojsonq/v2"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -303,14 +303,9 @@ func extractStorageClassFromMachineSet(ctx context.Context, client dynamicclient
 		return "", nil
 	}
 
-	bytes, err := list.Items[0].MarshalJSON()
+	storageClassName, _, err := unstructured.NestedString(list.Items[0].Object, "spec", "template", "spec", "providerSpec", "value", "storageClassName")
 	if err != nil {
 		return "", err
-	}
-
-	storageClassName, ok := gojsonq.New().FromString(string(bytes)).Find("spec.template.spec.providerSpec.value.storageClassName").(string)
-	if !ok {
-		return "", nil
 	}
 
 	if storageClassName != "" {

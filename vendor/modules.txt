@@ -206,8 +206,6 @@ github.com/sirupsen/logrus
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/thedevsaddam/gojsonq/v2 v2.5.2
-github.com/thedevsaddam/gojsonq/v2
 # go.etcd.io/etcd v0.5.0-alpha.5.0.20200716221620-18dfb9cca345
 go.etcd.io/etcd/auth/authpb
 go.etcd.io/etcd/clientv3
